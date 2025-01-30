@@ -14,21 +14,22 @@ import glob, random
 from sys import exit
 import time
 
-# init pygame and screen
+# Init pygame and screen
 WIDTH, HEIGHT = 800,450
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT ))
 pygame.display.set_caption('Intro Pygame')
 clock = pygame.time.Clock()
 
-# create font
+# Create font
 my_main_font = pygame.font.Font('fonts/Pixeltype.ttf', 80)
 timer_font = pygame.font.Font('fonts/Pixeltype.ttf', 50)
+letter_font = pygame.font.Font('fonts/Pixeltype.ttf', 50)
 
-# environment
+# Environment
 slicer_bg_surface = pygame.image.load('graphics/environments/slicer_bg.png').convert()
 
-# game name
+# Game name
 game_name_surface = my_main_font.render('Pixel Fruit Slicer', False, (211,166,139))
 game_name_rect = game_name_surface.get_rect(center=(400,80))
 
@@ -36,27 +37,35 @@ class Fruit:
     def __init__(self):
         self.file_path = "./graphics/fruits/*.png"
         self.images = glob.glob(self.file_path)
+        self.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
         # self.reset_fruit()
         
     def reset_fruit(self):
-        # Position et physique
+        # Fruits physics
         self.x = random.randint(50, WIDTH - 50)
         self.y = HEIGHT
         self.x_velocity = random.choice([-3, -2, -1, 1, 2, 3])
         self.y_velocity = -15
         self.gravity = 0.5
         
-        # Image
         random_image = random.choice(self.images)
         self.surface = pygame.image.load(random_image).convert_alpha()
         self.surface = pygame.transform.scale2x(self.surface)
         self.rect = self.surface.get_rect(center=(self.x, self.y))
+        
+        self.letter = random.choice(self.letters)
+        letter_x = self.rect.x
+        letter_y = self.rect.y - 30
+        self.letter_surface = letter_font.render(self.letter, True, 'Red')
+        self.letter_rect = self.letter_surface.get_rect(center=(letter_x,letter_y))
         
     def update_fruit_physics(self):
         self.y_velocity += self.gravity
         self.x += self.x_velocity
         self.y += self.y_velocity
         self.rect.center = (self.x, self.y)
+        self.letter_rect.x = self.rect.x
+        self.letter_rect.y = self.rect.y - 30
         
         # check if fruit out of screen
         if self.y > HEIGHT:
@@ -65,6 +74,7 @@ class Fruit:
         
     def draw_fruit(self, screen):
         screen.blit(self.surface, self.rect)
+        screen.blit(self.letter_surface, self.letter_rect)
 
 class Button:
     def __init__(self, x, y, width, height, text, font_size=50):
@@ -79,6 +89,7 @@ class Button:
         mouse_pos = pygame.mouse.get_pos()
         if self.rect.collidepoint(mouse_pos): color = self.hover_color
         else: color = self.color
+        
         pygame.draw.rect(surface, color, self.rect, border_radius=12)
         text_surface = self.font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
@@ -130,7 +141,7 @@ class Game:
         screen.blit(self.timer_surface, self.timer_rect)
         self.fruit.draw_fruit(screen)
 
-# Initialisation
+# Initialisation Game
 game = Game()
 
 # Main Game Loop
@@ -140,7 +151,7 @@ while True:
             pygame.quit()
             exit()
             
-        #menu
+        # Menu window
         if game.menu_state == "menu":
             if play_button.handle_event(event):
                 game.menu_state = "game"
@@ -153,6 +164,7 @@ while True:
     screen.blit(slicer_bg_surface, (0, 0))
     screen.blit(game_name_surface, game_name_rect)
     
+    # Menu states
     if game.menu_state == "menu":
         play_button.draw_button(screen)
         quit_button.draw_button(screen)
@@ -164,12 +176,11 @@ while True:
             continue
         game.update()
 
-        # Display fruit
         if game.strikes == 3:
             game.menu_state = "menu"
             continue
             
-        # Draw Fruit
+        # Draw fruits
         game.fruit.draw_fruit(screen)
 
     
