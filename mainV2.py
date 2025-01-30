@@ -19,25 +19,11 @@ WIDTH, HEIGHT = 800,450
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT ))
 pygame.display.set_caption('Intro Pygame')
+clock = pygame.time.Clock()
 
-# create Text and font
+# create font
 my_main_font = pygame.font.Font('fonts/Pixeltype.ttf', 80)
 timer_font = pygame.font.Font('fonts/Pixeltype.ttf', 50)
-
-# Time related variables
-clock = pygame.time.Clock()
-game_duration = 60
-start_time = time.time()
-remaining_time = game_duration
-
-# timer surface
-timer_surface = timer_font.render(f'Time: {remaining_time}', False, (211,166,139))
-timer_rect = timer_surface.get_rect(topright=(WIDTH-20, 20))
-
-#random fruit image picked
-file_path = ["./graphics/fruits/*.png"]
-images = glob.glob(random.choice(file_path))
-random_image = random.choice(images)
 
 # environment
 slicer_bg_surface = pygame.image.load('graphics/environments/slicer_bg.png').convert()
@@ -46,23 +32,39 @@ slicer_bg_surface = pygame.image.load('graphics/environments/slicer_bg.png').con
 game_name_surface = my_main_font.render('Pixel Fruit Slicer', False, (211,166,139))
 game_name_rect = game_name_surface.get_rect(center=(400,80))
 
-# fruits surface
-fruit_surface = pygame.image.load(random_image).convert_alpha()
-# fruit_surface = pygame.transform.rotozoom(fruit_surface, 0, 2)
-fruit_surface = pygame.transform.scale2x(fruit_surface)
-fruit_rect = fruit_surface.get_rect(center=(200,300))
-
-# Fruit Physics
-fruit_x = random.randint(50, WIDTH - 50)
-fruit_y = HEIGHT
-fruit_x_velocity = random.choice([-3, -2, -1, 1, 2, 3])
-fruit_y_velocity = -15
-gravity = 0.5
-
-# Game Variables
-strikes = 0
-game_over = False
-MENU_STATE = "menu"
+class Fruit:
+    def __init__(self):
+        self.file_path = "./graphics/fruits/*.png"
+        self.images = glob.glob(self.file_path)
+        # self.reset_fruit()
+        
+    def reset_fruit(self):
+        # Position et physique
+        self.x = random.randint(50, WIDTH - 50)
+        self.y = HEIGHT
+        self.x_velocity = random.choice([-3, -2, -1, 1, 2, 3])
+        self.y_velocity = -15
+        self.gravity = 0.5
+        
+        # Image
+        random_image = random.choice(self.images)
+        self.surface = pygame.image.load(random_image).convert_alpha()
+        self.surface = pygame.transform.scale2x(self.surface)
+        self.rect = self.surface.get_rect(center=(self.x, self.y))
+        
+    def update_fruit_physics(self):
+        self.y_velocity += self.gravity
+        self.x += self.x_velocity
+        self.y += self.y_velocity
+        self.rect.center = (self.x, self.y)
+        
+        # check if fruit out of screen
+        if self.y > HEIGHT:
+            return True
+        return False
+        
+    def draw_fruit(self, screen):
+        screen.blit(self.surface, self.rect)
 
 class Button:
     def __init__(self, x, y, width, height, text, font_size=50):
@@ -92,15 +94,44 @@ class Button:
 play_button = Button(WIDTH//2 - 100, HEIGHT//2 - 50, 200, 50, "Play")
 quit_button = Button(WIDTH//2 - 100, HEIGHT//2 + 50, 200, 50, "Quit")
 
-def reset_game():
-    global fruit_x, fruit_y, fruit_x_velocity, fruit_y_velocity, strikes, game_over, start_time
-    fruit_x = random.randint(50, WIDTH - 50)
-    fruit_y = HEIGHT
-    fruit_x_velocity = random.choice([-3, -2, -1, 1, 2, 3])
-    fruit_y_velocity = -15
-    strikes = 0
-    game_over = False
-    start_time = time.time()
+
+# Game Manager
+class Game:
+    def __init__(self):
+        self.menu_state = "menu"
+        self.strikes = 0
+        self.game_over = False
+        self.game_duration = 60
+        self.start_time = time.time()
+        self.remaining_time = self.game_duration
+        self.fruit = Fruit()
+        
+        # Timer surface
+        self.timer_surface = timer_font.render(f'Time: {self.remaining_time}', False, (211,166,139))
+        self.timer_rect = self.timer_surface.get_rect(topright=(WIDTH-20, 20))
+        
+    def reset_game(self):
+        self.strikes = 0
+        self.game_over = False
+        self.start_time = time.time()
+        self.fruit.reset_fruit()
+        
+    def update_timer(self):
+        self.remaining_time = max(self.game_duration - int(time.time() - self.start_time), 0)
+        self.timer_surface = timer_font.render(f'Time: {self.remaining_time}', False, (211,166,139))
+        return self.remaining_time == 0
+    
+    def update(self):
+        if self.fruit.update_fruit_physics():
+            self.strikes += 1
+            self.fruit.reset_fruit()
+        
+    def draw_timer(self, screen):
+        screen.blit(self.timer_surface, self.timer_rect)
+        self.fruit.draw_fruit(screen)
+
+# Initialisation
+game = Game()
 
 # Main Game Loop
 while True:
@@ -110,10 +141,10 @@ while True:
             exit()
             
         #menu
-        if MENU_STATE == "menu":
+        if game.menu_state == "menu":
             if play_button.handle_event(event):
-                MENU_STATE = "game"
-                reset_game()
+                game.menu_state = "game"
+                game.reset_game()
             if quit_button.handle_event(event):
                 pygame.quit()
                 exit()
@@ -122,41 +153,25 @@ while True:
     screen.blit(slicer_bg_surface, (0, 0))
     screen.blit(game_name_surface, game_name_rect)
     
-    if MENU_STATE == "menu":
-        # Affichage du menu
+    if game.menu_state == "menu":
         play_button.draw_button(screen)
         quit_button.draw_button(screen)
     
-    elif MENU_STATE == "game":
-        # Timer
-        remaining_time = max(game_duration - int(time.time() - start_time), 0)
-        timer_surface = timer_font.render(f'Time: {remaining_time}', False, (211,166,139))
-        screen.blit(timer_surface, timer_rect)
-        
-        if remaining_time == 0:
-            MENU_STATE = "menu"
+    elif game.menu_state == "game":
+
+        if game.update_timer():
+            game.menu_state = "menu"
             continue
-        
+        game.update()
 
         # Display fruit
-        fruit_y_velocity += gravity
-        fruit_x += fruit_x_velocity
-        fruit_y += fruit_y_velocity
-        
-        if fruit_y > HEIGHT:
-            strikes += 1
-            fruit_x = random.randint(50, WIDTH - 50)
-            fruit_y = HEIGHT
-            fruit_y_velocity = -15
-            fruit_x_velocity = random.choice([-3, -2, -1, 1, 2, 3])
-            
-        if strikes == 3 and remaining_time == 0:
-            MENU_STATE = "menu"
+        if game.strikes == 3:
+            game.menu_state = "menu"
             continue
-
+            
         # Draw Fruit
-        fruit_rect.center = (fruit_x, fruit_y)
-        screen.blit(fruit_surface, fruit_rect)
+        game.fruit.draw_fruit(screen)
+
     
     # Update Display
     pygame.display.update()
