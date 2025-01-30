@@ -38,15 +38,14 @@ class Fruit:
         self.file_path = "./graphics/fruits/*.png"
         self.images = glob.glob(self.file_path)
         self.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-        # self.reset_fruit()
         
     def reset_fruit(self):
         # Fruits physics
         self.x = random.randint(50, WIDTH - 50)
         self.y = HEIGHT
         self.x_velocity = random.choice([-3, -2, -1, 1, 2, 3])
-        self.y_velocity = -15
-        self.gravity = 0.5
+        self.y_velocity = -13
+        self.gravity = 0.3
         
         random_image = random.choice(self.images)
         self.surface = pygame.image.load(random_image).convert_alpha()
@@ -116,29 +115,49 @@ class Game:
         self.start_time = time.time()
         self.remaining_time = self.game_duration
         self.fruit = Fruit()
+        self.score = 0
         
         # Timer surface
         self.timer_surface = timer_font.render(f'Time: {self.remaining_time}', False, (211,166,139))
         self.timer_rect = self.timer_surface.get_rect(topright=(WIDTH-20, 20))
+        
+        self.score_surface = timer_font.render(f'Score: {self.score}', False, (211,166,139))
+        self.score_rect = self.score_surface.get_rect(topleft=(20, 20))
         
     def reset_game(self):
         self.strikes = 0
         self.game_over = False
         self.start_time = time.time()
         self.fruit.reset_fruit()
+        self.score = 0
         
     def update_timer(self):
         self.remaining_time = max(self.game_duration - int(time.time() - self.start_time), 0)
         self.timer_surface = timer_font.render(f'Time: {self.remaining_time}', False, (211,166,139))
         return self.remaining_time == 0
     
+    def update_score(self):
+        self.score_surface = timer_font.render(f'Score: {self.score}', False, (211,166,139))
+    
+    def handle_input(self, event):
+        if event.type == pygame.KEYDOWN:
+            print(event.unicode.upper(),self.fruit.letter)
+            if event.unicode.upper() == self.fruit.letter:
+                self.score += 1
+                print(f' Touché!! {self.score}')
+                self.update_score()
+                self.fruit.reset_fruit()
+                return True
+        return False
+    
     def update(self):
         if self.fruit.update_fruit_physics():
             self.strikes += 1
             self.fruit.reset_fruit()
         
-    def draw_timer(self, screen):
+    def draw(self, screen):
         screen.blit(self.timer_surface, self.timer_rect)
+        screen.blit(self.score_surface, self.score_rect)
         self.fruit.draw_fruit(screen)
 
 # Initialisation Game
@@ -160,6 +179,9 @@ while True:
                 pygame.quit()
                 exit()
                 
+        elif game.menu_state == "game":
+            game.handle_input(event)
+            
     # Background
     screen.blit(slicer_bg_surface, (0, 0))
     screen.blit(game_name_surface, game_name_rect)
@@ -170,7 +192,6 @@ while True:
         quit_button.draw_button(screen)
     
     elif game.menu_state == "game":
-
         if game.update_timer():
             game.menu_state = "menu"
             continue
@@ -181,7 +202,7 @@ while True:
             continue
             
         # Draw fruits
-        game.fruit.draw_fruit(screen)
+        game.draw(screen)
 
     
     # Update Display
