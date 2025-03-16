@@ -8,10 +8,10 @@ PyFruity is a fun and engaging fruit slicing game built using Python and the Pyg
 
 ## Screenshots
 
-![Gameplay Screenshot 1](path/to/your/image1.png)  <!-- Replace with the actual path to your first image -->
+![Gameplay Screenshot 1](./pyfruity_01.png)  <!-- Replace with the actual path to your first image -->
 *Loading screen*
 
-![Gameplay Screenshot 2](path/to/your/image2.png)  <!-- Replace with the actual path to your second image -->
+![Gameplay Screenshot 2](./pyfruity_02.png)  <!-- Replace with the actual path to your second image -->
 *In-game screenshot*
 
 
